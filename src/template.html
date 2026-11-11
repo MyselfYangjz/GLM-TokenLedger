@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>用量账本 · API 用量统计</title>
+  <style>/* APP_STYLES */</style>
+</head>
+<body>
+<svg class="sr-only" aria-hidden="true"><defs>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 19V12m7 7V5m7 14V9"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-4 4 4-4 4 4M4 14v6h16v-6"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8zm0 0v6h5M8 13h8m-8 4h5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="9" r="5"/><path d="m12 12 9 9m-6-6 3-3m0 6 3-3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m-4-4 4 4 4-4M4 16v5h16v-5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></symbol>
+</defs></svg>
+<header class="topbar">
+  <div class="brand"><div class="brand-icon"><svg aria-hidden="true"><use href="#i-chart"/></svg></div><span class="brand-name">用量账本</span><span class="brand-sub">智谱 AI · API 用量统计</span></div>
+  <span class="local-badge"><span class="dot"></span>本地离线运行</span>
+</header>
+<main class="workspace">
+  <div class="page-head"><div><div class="eyebrow" style="margin-bottom:9px">Usage overview</div><h1>每一份用量，都清晰有据。</h1><p class="intro">导入账单，关联用户，查看每个 API key 的模型推理用量。</p></div><div class="actions"><button id="manage-mappings"><svg aria-hidden="true"><use href="#i-user"/></svg>用户名映射</button><button id="import-button" class="primary"><svg aria-hidden="true"><use href="#i-upload"/></svg>导入账单</button></div></div>
+  <div id="storage-notice" class="notice" role="status" hidden></div>
+  <div id="mapping-storage-notice" class="notice" role="status"><span id="mapping-storage-message">请先选择「用户映射.json」，再导入账单。每次打开需重新选择映射文件。</span> <button id="select-mapping" class="small">选择映射文件</button> <button id="save-mapping-file" class="small" hidden>导出映射</button></div>
+  <div id="import-notice" class="notice error" role="alert" hidden></div>
+  <div class="layout">
+    <aside class="panel sidebar" aria-label="账单管理">
+      <h2 class="section-title">账单文件 <span id="bill-count" class="count-badge">0 份</span></h2>
+      <button id="dropzone" class="dropzone"><svg aria-hidden="true"><use href="#i-upload"/></svg><span id="dropzone-label">点击选择，或拖拽账单到这里</span><small>支持 .xlsx · 可同时导入多份</small></button>
+      <input id="file-input" class="sr-only" type="file" accept=".xlsx" multiple aria-label="选择 Excel 账单" tabindex="-1">
+      <div class="bill-tools"><span id="selected-count">已选择 0 份账单</span><button id="select-all" class="text-btn">全选</button></div>
+      <div id="bill-list" class="bill-list"></div>
+      <p class="sidebar-note">勾选账单即可参与统计。<br>重叠明细按账单号自动去重。<br>数据仅保存在当前浏览器、本机使用。</p>
+    </aside>
+    <section class="main" aria-label="统计结果">
+      <div class="metrics">
+        <div class="panel metric highlight"><div class="metric-label">当前结果总用量<svg aria-hidden="true"><use href="#i-chart"/></svg></div><div class="metric-value"><span id="total-usage">0.000</span><small id="total-unit">K</small></div><div id="total-raw" class="metric-desc">0 token · 实际消耗</div></div>
+        <div class="panel metric"><div class="metric-label">参与统计的 API key<svg aria-hidden="true"><use href="#i-key"/></svg></div><div class="metric-value"><span id="key-count">0</span><small>个</small></div><div id="unmapped-count" class="metric-desc">暂无用量记录</div></div>
+        <div class="panel metric"><div class="metric-label">已关联用户<svg aria-hidden="true"><use href="#i-user"/></svg></div><div class="metric-value"><span id="user-count">0</span><small>位</small></div><div class="metric-desc">同一用户可关联多个 API key</div></div>
+      </div>
+      <section class="panel filters" aria-label="统计筛选">
+        <div class="filter-top"><h2>统计范围</h2><span class="product-pill">产品类型：模型推理</span></div>
+        <div class="filter-fields"><div class="field"><label for="start-date">开始日期</label><input class="input-box" id="start-date" type="date"></div><span class="date-separator">—</span><div class="field"><label for="end-date">结束日期</label><input class="input-box" id="end-date" type="date"></div><button id="reset-dates" class="quiet">全部时间</button></div>
+      </section>
+      <div id="result-notice" class="notice" role="status" hidden></div>
+      <section class="panel table-panel" aria-label="用户用量明细">
+        <div class="table-head"><div><h2 class="table-title">用户用量明细</h2><div id="range-label" class="table-sub">全部时间 · 用量从高到低</div></div><div class="table-actions"><div class="segmented" role="group" aria-label="用量单位"><button id="unit-K" aria-pressed="true">K · 千 token</button><button id="unit-M" aria-pressed="false">M · 百万 token</button></div><button id="export-results" class="small"><svg aria-hidden="true"><use href="#i-download"/></svg>导出</button></div></div>
+        <div class="search-wrap"><div class="search-inner"><svg aria-hidden="true"><use href="#i-search"/></svg><input id="search" class="input-box" type="search" aria-label="搜索 API key 或用户名" placeholder="搜索 API key 或用户名"></div></div>
+        <div class="table-scroll"><table><thead><tr><th scope="col">用户 API key</th><th scope="col">用户名 <span class="muted">· 点击编辑</span></th><th id="usage-heading" scope="col">用量（K）</th><th scope="col">占比</th></tr></thead><tbody id="results"></tbody></table></div>
+        <div id="empty-state" class="empty-state"><div class="empty-icon"><svg aria-hidden="true"><use href="#i-file"/></svg></div><strong id="empty-title">从导入第一份账单开始</strong><p id="empty-description">选择智谱 AI 开放平台费用明细 Excel，自动汇总每个 API key 的用量。</p></div>
+        <div class="table-foot"><span id="table-count">共 0 个 API key</span><span id="dedup-count">按账单号去重后统计</span></div>
+      </section>
+      <p class="rule-note"><strong>统计口径</strong>：汇总账单「用量」列，包含输入、输出与缓存命中。1 K = 1,000 token，1 M = 1,000,000 token。日期按消费日期，包含起止当天。</p>
+    </section>
+  </div>
+  <footer class="footer"><span>用量账本 / ZHIPU AI USAGE</span><span id="save-status" role="status">数据在本机处理 · 无需登录</span></footer>
+</main>
+<input id="mapping-file" class="sr-only" type="file" accept=".json,application/json" aria-label="选择映射文件" tabindex="-1">
+<dialog id="mapping-dialog" aria-labelledby="mapping-title"><h2 id="mapping-title">用户名映射</h2><div class="mapping-file-status"><span id="mapping-file-status">尚未选择映射文件</span><button id="change-mapping" class="small">选择映射文件</button></div><p>选择 JSON 文件并允许读写后，新增、修改或删除映射会自动同步到原文件。每次重新打开仍需选择文件；也可导出映射备份。用户名相同的多把 key 会保留各自用量。</p><form id="mapping-form"><label class="sr-only" for="mapping-key">API key</label><input id="mapping-key" class="input-box mono" placeholder="API key" required autocomplete="off"><label class="sr-only" for="mapping-name">用户名</label><input id="mapping-name" class="input-box" style="margin-top:10px" placeholder="用户名" required maxlength="100" autocomplete="off"><button id="save-mapping" class="primary small" style="margin-top:10px" type="submit">保存映射</button></form><div id="mapping-list" style="max-height:260px;overflow:auto;margin-top:18px"></div><div class="actions" style="flex-wrap:wrap"><button id="import-mappings" class="small">选择映射文件</button><button id="export-mappings" class="small">导出映射</button><button id="close-mappings" class="primary small">完成</button></div></dialog>
+<dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">删除账单</h2><p id="confirm-body" class="confirm-body"></p><div class="actions"><button id="cancel-confirm">取消</button><button id="accept-confirm" class="danger">删除</button></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+<noscript><p>请启用浏览器 JavaScript 后打开本工具。</p></noscript>
+<script type="text/plain" id="sheetjs-license">/* THIRD_PARTY_LICENSE */</script>
+<script>/* XLSX_LIBRARY */</script>
+<script>/* CORE_SCRIPT */</script>
+<script>/* MAPPING_FILE_SCRIPT */</script>
+<script>/* APP_SCRIPT */</script>
+</body>
+</html>
